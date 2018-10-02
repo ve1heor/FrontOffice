@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+<title>DPC-CashFront: Фронт кассира</title>
+
+<!-- Bootstrap -->
+<link href="css/bootstrap.min.css" rel="stylesheet">
+<link href="css/bootstrap-grid.css" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/font-awesome.min.css"> 
+<link rel="stylesheet" href="css/jquery-ui.css"> 
+
+</head>
+<body>
+<!--HEADER-->
+<header>
+  <div class="row">
+    <div class="col-md-9 top-buttons">
+      <div class="row d-flex justify-content-between">
+        <a href="#" class="menu-button header-active">Арт <span>(F2)</span></a>
+        <a href="#" class="menu-button">Наим <span>(F3)</span></a>
+        <a href="#" class="menu-button">Цена <span>(F4)</span></a>
+        <a href="#" class="menu-button">ШК <span>(F5)</span></a>
+        <a href="#" class="menu-button">Диск. карта <span>(F6)</span></a>
+      </div>
+      <div class="row search d-flex justify-content-between align-items-center">
+        <!--<a href="#" class="button language">RU </a>-->
+        <i class="fa fa-search"></i>
+        <input id="search-field" type="text" class="search-input" placeholder="PISOS"></div>
+    </div>
+    <div class="col-md-3 top-system">
+      <div class="row system-buttons d-flex justify-content-around">
+        <a class=""><i class="fa fa-user"></i><span id="current-user"></span></a>
+        <a id='btn-lock' data-toggle="modal" data-target="#user_block_modal" class="lock"><i class="fa fa-lock"></i></a>
+        <a href="#" class="info"><i class="fa fa-info-circle"></i></a>
+        <a href="#" onclick="closeWindow()" class="exit"><i class="fa fa-power-off"></i></a>
+      </div>
+      <div class="row info-display">
+        <h1  class="big-sum">= <span id="final-cost">0.00</span></h1>
+        <div class="row back-type justify-content-between">
+          <p class="back-cash bold">-0.00</p>
+          <p id="type-check" class="bold"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+<!--MAIN-->
+<section class="main">
+  <div class="row">
+    <div class="col-md-9 main-left">
+      <div class="row thead bold">
+        <div class="col-sp-1">#</div>
+        <div class="col-sp-4">Код</div>
+        <div class="col-sp-10">Наименование</div>
+        <div class="col-sp-3">Цена</div>
+        <div class="col-sp-3">Кол-во</div>
+        <div class="col-sp-3">Сумма</div>
+      </div>
+      <div class="tbody" id="products"></div>
+    </div>
+    <div class="col-md-3 main-right">
+      <div class="right-buttons d-flex flex-column">
+        <a id='button-edit-quantity'  data-toggle="#" data-target="#user_block_modal" class="button"><i class="fa fa-asterisk"></i> Изм. кол-во (*)</a>
+        <a id="button-plus-product" class="button"><i class="fa fa-plus-circle"></i> Добавить 1 шт (+)</a>
+        <a id="button-minus-product" class="button"><i class="fa fa-minus-circle"></i> Отнять 1 шт (-)</a>
+        <a onclick="deleteProduct()" class="button"><i class="fa fa-trash"></i> Удалить (DEL)</a>
+        <a id="button-handle-discount" class="button"><i class="fa fa-times"></i> Ручная скидка (F11)</a>
+        <a id='btn-service' onclick="openServiceModal()" class="button service"><i class="fa fa-wrench"></i> Сервис (F8)</a>
+        <a id='btn-pay'  data-toggle="modal" data-target="#pay_modal" class="button pay"><i class="fa fa-print"></i> Оплата (Space)</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="row">
+    <div class="col-md-9">
+      <div class="row large-name">
+        <h2 id="big-name" class="big-info">#############</h2>
+      </div>
+      <div class="row small-info bold">
+        <div class="col-md-3 d-flex">
+          <p>Штрихкод: <br><span id="big-barcode">#############</span></p>
+          <p class="article">Артикул: <br><span id="big-article">#############</span></p>
+        </div>
+        <div class="col-md-9 d-flex">
+          <p class="small-skidka">Временная: <br><span id="big-td-percent">0</span>%</p>
+          <p class="small-skidka">Дисконтная: <br><span id="big-dd-percent">0</span>%</p>
+          <p class="small-skidka">Количественная: <br><span id="big-qd-percent">0</span>%</p>
+          <p class="small-skidka">Суммовая: <br><span id="big-sd-percent">0</span>%</p>
+          <p class="small-skidka">Ручная: <br><span id="big-hd-percent">0</span>%</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 text-center justify-content-center d-flex align-items-center">
+      <h3 id="doc_time"></h3>
+    </div>
+  </div>
+</footer>
+
+<div class="warning text-center">
+  <h1>Для комфортной работы в Front-Office <br> необходимо разрешение экрана не меньше чем 800х600px</h1>
+</div>
+
+<script>window.$ = window.jQuery = require('jquery');</script>
+
+<script>
+  if (window.innerWidth < '800' || window.innerHeight < '600'){
+      $('header').hide();
+      $('.main').hide();
+      $('footer').hide();
+      $('.warning').css('display','flex');
+  }
+</script>
+
+ <!-- -->
+<div class="modal" id="user_block_modal" data-keyboard="false" role="dialog" aria-labelledby="myModalLabel" aria-hidden="false">
+  <div class="modal-dialog modal-md modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">Авторизация</div>
+      <div class="modal-body">
+         <div class="row justify-content-center">
+              <form action="#">
+                <label class="text-left" for="sel_kassir">Логин (F1)</label>
+                <input name="" id="sel_kassir"></input>
+                <label class="text-left" for="pass_kassir">Пароль (F2)</label>
+                <input id="pass_kassir" type="password" required placeholder="Пароль..." class="form-control">
+              </form>
+          </div>
+      </div>
+      <div class="modal-footer">
+        <a id="button-enter" class="button">Войти(Enter)</a>
+        <a id="button-close-enter" class="button">Выход (Esc)</a>
+      </div>     
+    </div>
+  </div>
+</div>
+<!-- -->
+        
+ <!-- -->
+<div class="modal" id="change_quantity_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="false">
+  <div class="modal-dialog modal-md modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Количество товара</h3>
+        <button id="btn-close-lock"  class="close" data-dismiss="modal" aria-hidden="true">&times;</button>  
+      </div>
+      <div class="modal-body text-center">
+       <div class="row justify-content-center flex-center">
+        <div class="col-md-12 d-flex row">
+          <p>Способ изменения количества (F1)</p>
+            <a id="set-quantity" class="button">Заменять</a>
+            <a id="sum-quantity" class="button">Складывать</a>
+        </div>
+        <div class="col-md-12 d-flex row">
+          <p>Количество (F2)</p>
+          <input id="modal-quantity-product" type="number" name="">
+        </div>
+       </div>
+      </div>
+      <div class="modal-footer">
+        <a href="#" class="button">Принять (Enter)</a>
+        <a href="#" class="button">Отмена (Esc)</a>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- -->
+
+ <!-- -->
+<div class="modal" id="change_handle_discount_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="false">
+  <div class="modal-dialog modal-md modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Ручная скидка</h3>
+        <button id="btn-close-lock"  class="close" data-dismiss="modal" aria-hidden="true">&times;</button>  
+      </div>
+      <div class="modal-body text-center">
+       <div class="row justify-content-center flex-center">
+        <div class="col-md-12 d-flex row">
+          <p>Процент (F1)</p>
+          <input id="modal-hd-percent" max="100" min="0" step="1" type="number" name="">
+        </div>
+        <div class="col-md-12 d-flex row">
+          <p>Сумма скидки на товар (F2)</p>
+          <input id="modal-hd-coast" min="0" step="0.01" type="number" name="">
+        </div>
+       </div>
+      </div>
+      <div class="modal-footer">
+        <a href="#" class="button">Принять (Enter)</a>
+        <a href="#" class="button">Отмена (Esc)</a>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- -->
+
+<!-- -->
+<div class="modal" id="service_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog modal-md modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Сервис</h3>
+        <button id="btn-close-service"  class="close" data-dismiss="modal" aria-hidden="true">&times;</button>  
+      </div>
+      <div class="modal-body text-center">
+       <div class="row justify-content-center">
+        <div class="row service_btns">
+          <a class="button">Повтор чека (F1)</a>
+          <a class="button">Отложить чек (F2)</a>
+          <a class="button">Х-отчет (F3)</a>
+          <a class="button">Выбрать отлож. чек (F4)</a>
+          <a class="button">Z-отчет (F5)</a>
+          <a class="button" onclick="openOptionModal()" >Системные настройки (F6)</a>
+        </div>
+       </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- -->
+
+<!-- -->
+<div class="modal" id="options_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" data-backdrop="false">
+  <div class="modal-dialog modal-md modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Системные настройки</h3>
+        <button id="btn-close-options"  class="close" data-dismiss="modal" aria-hidden="true">&times;</button>  
+      </div>
+      <div class="modal-body">
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link active" id="home-tab" data-toggle="tab" href="#kassa" role="tab" aria-controls="home" aria-selected="true">Касса</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="profile-tab" data-toggle="tab" href="#tools" role="tab" aria-controls="profile" aria-selected="false">Оборудование</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="contact-tab" data-toggle="tab" href="#job" role="tab" aria-controls="contact" aria-selected="false">Работа</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="contact-tab" data-toggle="tab" href="#barcode" role="tab" aria-controls="contact" aria-selected="false">Штрихкоды</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="contact-tab" data-toggle="tab" href="#discount" role="tab" aria-controls="contact" aria-selected="false">Скидки</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="contact-tab" data-toggle="tab" href="#luck" role="tab" aria-controls="contact" aria-selected="false">Удача</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="contact-tab" data-toggle="tab" href="#barter" role="tab" aria-controls="contact" aria-selected="false">Обмен</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="contact-tab" data-toggle="tab" href="#backups" role="tab" aria-controls="contact" aria-selected="false">Бэкапы</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="contact-tab" data-toggle="tab" href="#users" role="tab" aria-controls="contact" aria-selected="false">Пользователи</a>
+          </li>
+        </ul>
+        <div class="tab-content" id="myTabContent">
+          <div class="tab-pane show active" id="kassa" role="tabpanel" aria-labelledby="home-tab">
+            <div class="form-pay">
+              <div class="col-md-12 d-flex option-row">
+                <p>IP адрес кассового аппарата (F1)</p>
+                <input type="text" id="ip-address-ksa" required pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$">
+              </div>
+            </div>
+          </div>
+          <div class="tab-pane " id="tools" role="tabpanel" aria-labelledby="profile-tab">
+            2
+          </div>
+          <div class="tab-pane " id="job" role="tabpanel" aria-labelledby="contact-tab">
+            <div class="form-pay">
+              <div class="row form-pay-content d-flex flex-wrap">
+                  <div class="col-md-12 d-flex option-row">
+                    <input type="checkbox" class="checkbox" id="union-position-checkbox" name="checkbox" />
+                    <label for="union-position-checkbox">Объединять одинаковые позиции в чеке (F1)</label>
+                  </div>
+                  <div class="col-md-12 d-flex option-row">
+                    <p>Величина округления суммы (F2)</p>
+                    <input type="text" id="rounding-accuracy">
+                  </div>
+                  <div class="col-md-12 d-flex option-row">
+                    <p>Режим поиска по умолчанию (F3)</p>
+                    <a id="choose-search-article" class="button">Артикул</a>
+                    <a id="choose-search-name" class="button">Наименование</a>
+                    <a id="choose-search-price" class="button">Цена</a>
+                    <a id="choose-search-barcode" class="button">Штрихкод</a>
+                  </div>
+               
+                  <!--<div class="col-md-12 d-flex option-row">
+                    <p>Раскаладка клавиатуры по умолчанию (F3)</p>
+                  <a id="choose-lang-ru" class="button active-option">RU</a>
+                  <a id="choose-lang-en" class="button">EN</a>
+                  </div>-->
+              </div>
+            </div>
+          </div>
+          <div class="tab-pane " id="barcode" role="tabpanel" aria-labelledby="contact-tab">
+            <div class="form-pay">
+              <div class="row form-pay-content d-flex flex-wrap">
+                  <div class="col-md-12 d-flex option-row">
+                    <input type="checkbox" class="checkbox" id="weight-barcode-checkbox" name="checkbox" />
+                    <label for="weight-barcode-checkbox">Работа с весовыми штрихкодами (F1)</label>
+                  </div>
+                  
+                  <div class="col-md-12 d-flex option-row">
+                    <p>Префикс весового штрихкода (F2)</p>
+                    <input class="input-prefix" type="text" id="weight-barcode-prefix">
+                  </div>
+               
+                  <div class="col-md-12 d-flex option-row">
+                    <p>Структура весового штрихкода (F3)</p>
+                    <a id="weight-barcode-first" class="button">PPCCCCCBBBBBK</a>
+                    <a id="weight-barcode-second" class="button">PPCCCCCCBBBBK</a>
+                  </div>
+
+                   <div class="col-md-12 d-flex option-row">
+                    <p>Префикс штрихкода дисконтной карты (F4)</p>
+                    <input class="input-prefix" type="text" id="discount-barcode-prefix">
+                  </div>
+              </div>
+            </div>
+          </div>
+          <div class="tab-pane " id="discount" role="tabpanel" aria-labelledby="contact-tab">
+            <div class="form-pay">
+              <div class="row form-pay-content d-flex flex-wrap">
+                  <div class="col-md-12 d-flex option-row">
+                    <input type="checkbox" class="checkbox" id="card-discount-checkbox" name="checkbox" />
+                    <label for="card-discount-checkbox">Дисконтная скидка (F1)</label>
+                  </div>
+                  <div class="col-md-12 d-flex option-row">
+                    <input type="checkbox" class="checkbox" id="quantity-discount-checkbox" name="checkbox" />
+                    <label for="quantity-discount-checkbox">Количественная скидка (F2)</label>
+                  </div>
+                  <div class="col-md-12 d-flex option-row">
+                    <input type="checkbox" class="checkbox" id="sum-discount-checkbox" name="checkbox" />
+                    <label for="sum-discount-checkbox">Суммовая скидка (F3)</label>
+                  </div>
+                  <div class="col-md-12 d-flex option-row">
+                    <input type="checkbox" class="checkbox" id="temporary-discount-checkbox" name="checkbox" />
+                    <label for="temporary-discount-checkbox">Временная скидка (F4)</label>
+                  </div>
+                  <div class="col-md-12 d-flex option-row">
+                    <input type="checkbox" class="checkbox" id="manual-discount-checkbox" name="checkbox" />
+                    <label for="manual-discount-checkbox">Ручная скидка (F5)</label>
+                  </div>
+                  <div class="col-md-12 d-flex option-row">
+                    <p>Максимальный процент скидки (F6)</p>
+                    <input min="0" max="100" step="1" type="number" id="max-procent-discount">
+                  </div>
+                  <div class="col-md-12 d-flex option-row">
+                    <p>Объединение скидок (F7)</p>
+                    <a id="choose-max-discount" class="button">Выбирать максимальную</a>
+                    <a id="choose-total-discount" class="button">Складывать</a>
+                  </div>
+                  <div class="col-md-12 d-flex option-row">
+                    <p>Итого по суммовой скидке (F8)</p>
+                    <input min="0.00" max="99999.99" type="number" step="0.01" name="" placeholder="0" id="sum-val-discount">
+                  </div>
+                  <div class="col-md-12 d-flex option-row">
+                    <p>Процент суммовой скидки (F9)</p>
+                    <input min="0" max="100" type="number" step="1" name="" placeholder="0" id="sum-procent-discount">
+                  </div>
+              </div>
+            </div>
+          </div>
+          <div class="tab-pane " id="luck" role="tabpanel" aria-labelledby="contact-tab">
+            <div class="form-pay">
+              <div class="row form-pay-content d-flex flex-wrap">
+                  <div class="col-md-12 d-flex option-row">
+                    <input type="checkbox" class="checkbox" id="union-position-checkbox" name="checkbox" />
+                    <label for="union-position-checkbox">Использование чеков удачи (F1)</label>
+                  </div>
+                  
+                  <div class="col-md-12 d-flex option-row">
+                    <p>Период действия</p>
+                    <input type="text" id="okr5" placeholder="с">
+                    <input type="text" id="okr6" placeholder="по">
+                  </div>
+               
+                  <div class="col-md-12 d-flex option-row">
+                    <p>Наименование подарка за сумму в чеке удачи или товар</p>
+                    <input type="text" id="okr7">
+                  </div>
+
+                  <div class="col-md-12 d-flex option-row">
+                    <p>Макс число подарков на один чек</p>
+                    <input type="text" id="okr8">
+                  </div>
+
+                  <div class="col-md-12 d-flex option-row">
+                    <p>Какие чеки участвуют </p>
+                  <a href="#" class="button">При наличии дисконтной карты</a>
+                  <a href="#" class="button">Все чеки</a>
+                  </div>
+
+                  <div class="col-md-12 d-flex option-row">
+                    <input type="checkbox" class="checkbox" id="union-position-checkbox" name="checkbox" />
+                    <label for="union-position-checkbox">Участвуют только при наличии в чеке товара удачи (F1)</label>
+                  </div>
+              </div>
+            </div>
+          </div>
+          <div class="tab-pane " id="barter" role="tabpanel" aria-labelledby="contact-tab">
+            <input id="fileInput" type="file" size="50" onchange="loadFile(this.files)">
+          </div>
+          <div class="tab-pane " id="backups" role="tabpanel" aria-labelledby="contact-tab">
+            <div class="form-pay">
+              <div class="row form-pay-content d-flex flex-wrap">
+                  <div class="col-md-12 d-flex option-row">
+                    <p>Каталог для хранения бэкапов (F1)</p>
+                    <input type="text" id="backup-folder-path"> 
+                    <a id="backup-folder-button" class="button active-button">Выбрать</a> 
+                    <input style="display:none" type="file" webkitdirectory id="backup-folder">
+                  </div>
+               
+                  <div class="col-md-12 d-flex option-row">
+                    <p>Период создания бэкапов (F2)</p>
+                    <input type="text" id="backup-period">
+                  </div>
+              </div>
+            </div>
+          </div>
+          <div class="tab-pane " id="users" role="tabpanel" aria-labelledby="contact-tab">
+            <div class="d-flex">
+              <div class="col-md-6 row">
+
+                <div class="col-md-12">
+                  <label class="text-left" for="login_reg">Логин (F1)</label>
+                  <input id="login_reg" type="text" required placeholder="Логин..." class="form-control">
+                  <label class="text-left" for="pass_reg">Пароль (F2)</label>
+                  <input id="pass_reg" type="text" required placeholder="Пароль..." class="form-control">
+                  <div class="modal-footer">
+                    <a id="button-add-user" class="button">Сохранить(F3)</a>
+                  </div>
+                </div>
+
+                </div>
+                <div class="col-md-6 row">
+                  <div class="col-md-12">
+                    <div class="row thead bold">
+                      <div class="col-sp-2">#</div>
+                      <div class="col-sp-9">Логин</div>
+                      <div class="col-sp-9">Пароль</div>
+                    </div>
+                    <div class="tbody" id="users-list">
+                     
+                    </div>
+                    <div class="modal-footer">
+                      <a id="button-edit-user" class="button">Изменить(F4)</a>
+                      <a id="button-delete-user" class="button">Удалить(Del)</a>
+                    </div>
+                  </div>
+                </div>
+             </div>
+          </div>
+        </div>
+        <!---->
+      </div>
+      <div class="modal-footer">
+        <a class="button">Принять(Enter)</a>
+        <a class="button">Отмена(Esc)</a>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- -->
+
+<!-- -->
+<div class="modal" id="pay_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" >
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Оплата</h3>
+        <button id="btn-close-pay"  class="close" data-dismiss="modal" aria-hidden="true">&times;</button>  
+      </div>
+      <div class="modal-body text-center">
+       <div class="row summary">
+        <h3 id="sumcheck" class="bold">Всего по чеку: 
+          <span id="final_coast_dialog">
+            0.00  
+          </span>
+        </h3>
+        <div class="discount text-left ">
+          <h5>Дисконтная карта: <span id="discount-card-number">#############</span></h5>
+          <h5>Процент скидки: <span id="discount-card-percent">0</span>%</h5>
+        </div>
+       </div>
+       <div class="row pay-main">
+         <div class="text-left pay-left">
+            <h4 class="light">Внесено</h4>
+            <class class="row input-field">
+              <p>Наличными:</p>
+              <input id="pay_modal_nal" min="0.00" max="99999.99" inputmode= class="selected-str" type="number" step="0.01" name="" placeholder="0.00">
+            </class>
+            <class class="row input-field">
+              <p>Банк. картой:</p>
+              <input id="pay_modal_bnal" min="0.00" max="99999.99" type="number" step="0.01" name="" placeholder="0.00">
+            </class>
+            <class class="row input-field">
+              <p>Сертификаты:</p>
+              <input id="pay_modal_sert" min="0.00" max="99999.99" type="number" step="0.01" name="" placeholder="0.00">
+            </class>
+            <!--<class class="row input-field">
+              <p>Скидка:</p>
+              <input  id="pay_modal_disc" min="0.00" max="99999.99" type="number" step="0.01" name="" placeholder="0.00">
+            </class>-->
+            <h2 class="bold">Сдача: 
+              <span id="pay_modal_rest_money">0.00</span>
+            </h2>
+         </div> 
+         <div class="pay-right">
+            <div class="row inline-block align-items-center">
+              <p>Номера сертификатов</p>
+              <a href="#"><i class="fa fa-plus-circle"></i>Добавить (F2)</a>
+            </div>
+            <div class="table">
+              <p>0000005</p>
+            </div>
+         </div>
+       </div>
+       <div class="row pay-buttons">
+         <a id="print-check" class="kick"><i class="fa fa-print"></i>Пробить чек (Space)</a>
+         <a class="unkick"><i class="fa fa-save"></i>Отложить чек (F4)</a>
+       </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+ <!-- -->
+<div class="modal" id="search_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Поиск</h3>
+        <button id="btn-close-search"  class="close" data-dismiss="modal" aria-hidden="true">&times;</button>  
+      </div>
+      <div class="modal-body">
+        <section class="main">
+          <div class="row">
+           <div class="col-md-12 main-left">
+            <div class="row thead bold">
+              <div class="col-sp-1">#</div>
+              <div class="col-sp-5">Код</div>
+              <div class="col-sp-10">Наименование</div>
+              <div class="col-sp-3">Цена</div>
+              <div class="col-sp-5">Артикул</div>
+              <!--<div class="col-sp-3">Сумма</div>-->
+            </div>
+            <div class="tbody" id="search-products">
+            </div>
+          </div>
+          </div>
+        </section>
+        <div class="row">
+          <div class="col-md-12">
+            <p>Найдено товаров: <span id="search-quantity">0</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- -->
+
+<!-- <script src="js/jquery.min.js"></script> -->
+
+<script src="js/jquery/jquery-ui.js"></script>
+<script src="js/bootstrap/bootstrap.js"></script>
+<script src="js/jquery/jquery.autocomplete.js"></script>
+<script src="js/wow.min.js"></script>
+<script src="js/option.js"></script>
+<script src="js/sqlite.js"></script>
+<script src="js/serialport.js"></script>
+<script src="js/backup.js"></script>
+<script src="js/main.js"></script>
+<script>
+  function clock() {
+  var d = new Date();
+  var month_num = d.getMonth()
+  var day = d.getDate();
+  var hours = d.getHours();
+  var minutes = d.getMinutes();
+  var seconds = d.getSeconds();
+   
+  month=new Array("января", "февраля", "марта", "апреля", "мая", "июня",
+  "июля", "августа", "сентября", "октября", "ноября", "декабря");
+   
+  if (day <= 9) day = "0" + day;
+  if (hours <= 9) hours = "0" + hours;
+  if (minutes <= 9) minutes = "0" + minutes;
+  if (seconds <= 9) seconds = "0" + seconds;
+   
+  date_time = hours + ":" + minutes + ":" + seconds + "<br>" + day + " " + month[month_num] + " " + d.getFullYear() + " г." ;
+  if (document.layers) {
+   document.layers.doc_time.document.write(date_time);
+   document.layers.doc_time.document.close();
+  }
+  else document.getElementById("doc_time").innerHTML = date_time;
+   setTimeout("clock()", 1000);
+  }
+  clock();
+</script>
+<script>
+  new WOW().init();
+</script>
+<script src="js/updater.js"></script>
+</body>
+</html>
